@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  fullName      String
+  role          String    @default("REPORTER") // REPORTER, OWNER, ADMIN
+  phoneNumber      String?
+  bankName         String?
+  accountNumber    String?
+  accountName      String?
+  emailVerified    Boolean   @default(false)
+  verificationCode String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  ownedFields   Field[]   @relation("FieldOwner")
+  reports       Report[]
+  payouts       Payout[]
+  notifications Notification[]
+  admin         Admin?
+
+  @@index([role])
+  @@map("users")
+}
+
+model Field {
+  id            String   @id @default(cuid())
+  name          String
+  location      String
+  description   String?
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  surfaceType   String?
+  fieldSize     String?
+  availability  String?
+  contactInfo   String?
+  latitude      Float?
+  longitude     Float?
+  images        Json     @default("[]")
+  ownerId       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  owner       User     @relation("FieldOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  reports     Report[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@map("fields")
+}
+
+model Report {
+  id        String       @id @default(cuid())
+  content   String
+  status    String @default("PENDING") // PENDING, APPROVED, REJECTED
+  userId    String
+  fieldId   String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  field     Field        @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@index([fieldId])
+  @@map("reports")
+}
+
+model Payout {
+  id          String        @id @default(cuid())
+  userId      String
+  amount      Float
+  status      String  @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  receiptUrl  String?
+  createdAt   DateTime      @default(now())
+  processedAt DateTime?
+
+  // Relations
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@map("payouts")
+}
+
+model Admin {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  permissions Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  type      String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
