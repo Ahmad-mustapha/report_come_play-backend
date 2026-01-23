@@ -54,18 +54,18 @@ In the **Environment** section, add all your environment variables from `.env`:
 
 | Key | Value | Notes |
 |-----|-------|-------|
-| `DATABASE_URL` | `postgresql://postgres.youmipkmbwwsvwwwvgxw:report_come_play%4012@aws-1-eu-west-1.pooler.supabase.com:5432/postgres` | Your Supabase connection string |
-| `SUPABASE_URL` | `https://youmipkmbwwsvwwwvgxw.supabase.co` | Your Supabase URL |
-| `SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | Your Supabase anon key |
+| `DATABASE_URL` | `postgresql://user:password@host:port/database` | Your Supabase connection string |
+| `SUPABASE_URL` | `https://your-project.supabase.co` | Your Supabase URL |
+| `SUPABASE_ANON_KEY` | `your-anon-key` | Your Supabase anon key |
 | `PORT` | `10000` | Render uses port 10000 by default |
 | `NODE_ENV` | `production` | Set to production |
 | `JWT_SECRET` | **Generate a new secure secret!** | Use a different secret than development |
 | `JWT_EXPIRES_IN` | `7d` | Token expiration time |
-| `ALLOWED_ORIGINS` | `https://report-come-play.vercel.app` | Your Vercel frontend URL |
-| `ADMIN_EMAIL` | `musbene03@gmail.com` | Admin email |
-| `ADMIN_PASSWORD` | `shinlo@123` | Admin password |
-| `ADMIN_NAME` | `Musben` | Admin name |
-| `RESEND_API_KEY` | `re_D7nDBctb_CLkUQBMtHSKXsPSMkH2zuQyy` | Your Resend API key |
+| `ALLOWED_ORIGINS` | `https://your-frontend.vercel.app` | Your Vercel frontend URL |
+| `ADMIN_EMAIL` | `your-admin@email.com` | Admin email |
+| `ADMIN_PASSWORD` | `your-admin-password` | Admin password |
+| `ADMIN_NAME` | `Admin Name` | Admin name |
+| `RESEND_API_KEY` | `your-resend-api-key` | Your Resend API key |
 | `FROM_EMAIL` | `onboarding@resend.dev` | From email address |
 
 ### 🔐 Important Security Notes:
