@@ -61,6 +61,49 @@ export const getAllUsers = async (req, res, next) => {
 };
 
 /**
+ * Get user by ID (Admin only)
+ * GET /api/admin/users/:id
+ */
+export const getUserById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                fullName: true,
+                role: true,
+                phoneNumber: true,
+                bankName: true,
+                accountNumber: true,
+                accountName: true,
+                emailVerified: true,
+                createdAt: true,
+                _count: {
+                    select: { reports: true, ownedFields: true, payouts: true },
+                },
+            },
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found.',
+            });
+        }
+
+        res.json({
+            success: true,
+            data: user,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Get all payouts (Admin only)
  * GET /api/admin/payouts
  */
