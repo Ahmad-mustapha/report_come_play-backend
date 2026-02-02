@@ -30,5 +30,7 @@ router.post('/register', authLimiter, registerValidation, authController.registe
 router.post('/login', authLimiter, loginValidation, authController.login);
 router.get('/me', authenticateToken, authController.getCurrentUser);
 router.post('/verify-email', authController.verifyEmail);
+router.post('/resend-verification', authLimiter, authController.resendVerificationCode);
+
 
 export default router;

@@ -61,12 +61,12 @@ In the **Environment** section, add all your environment variables from `.env`:
 | `NODE_ENV` | `production` | Set to production |
 | `JWT_SECRET` | **Generate a new secure secret!** | Use a different secret than development |
 | `JWT_EXPIRES_IN` | `7d` | Token expiration time |
-| `ALLOWED_ORIGINS` | `https://your-frontend.vercel.app` | Your Vercel frontend URL |
+| `ALLOWED_ORIGINS` | `https://report.comeplayapp.com,https://report-come-play.vercel.app` | Your production frontend URLs |
 | `ADMIN_EMAIL` | `your-admin@email.com` | Admin email |
 | `ADMIN_PASSWORD` | `your-admin-password` | Admin password |
 | `ADMIN_NAME` | `Admin Name` | Admin name |
 | `RESEND_API_KEY` | `your-resend-api-key` | Your Resend API key |
-| `FROM_EMAIL` | `onboarding@resend.dev` | From email address |
+| `FROM_EMAIL` | `noreply@comeplayapp.com` | Verified domain email address |
 
 ### 🔐 Important Security Notes:
 
@@ -188,4 +188,4 @@ To handle more traffic:
 **Deployment Date**: January 23, 2026  
 **Backend Version**: 1.0.0  
 **Database**: Supabase PostgreSQL  
-**Frontend**: Vercel (https://report-come-play.vercel.app)
+**Frontend**: https://report.comeplayapp.com (Vercel)

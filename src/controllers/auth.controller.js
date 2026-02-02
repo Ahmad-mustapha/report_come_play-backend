@@ -43,6 +43,9 @@ export const register = async (req, res, next) => {
         // Generate 6-digit verification code
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
+        // Set expiry to 15 minutes from now
+        const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
         // Create or Update user (Upsert)
         const user = await prisma.user.upsert({
             where: { email },
@@ -52,6 +55,7 @@ export const register = async (req, res, next) => {
                 role: role || 'REPORTER',
                 phoneNumber,
                 verificationCode,
+                verificationCodeExpiry,
             },
             create: {
                 email,
@@ -60,6 +64,7 @@ export const register = async (req, res, next) => {
                 role: role || 'REPORTER',
                 phoneNumber,
                 verificationCode,
+                verificationCodeExpiry,
             },
             select: {
                 id: true,
@@ -72,8 +77,6 @@ export const register = async (req, res, next) => {
         });
 
         // Send verification email
-        // Note: In development with Resend, you can only send to your own email unless you verify a domain.
-        console.log(`📧 [DEBUG] Verification code for ${email}: ${verificationCode}`);
         await sendVerificationEmail(email, fullName, verificationCode);
 
         // Generate token
@@ -125,6 +128,17 @@ export const login = async (req, res, next) => {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password.'
+            });
+        }
+
+        // Check verification status
+        if (!user.emailVerified) {
+            return res.status(403).json({
+                success: false,
+                message: 'Email not verified. Please check your email for the verification code.',
+                needsVerification: true,
+                userId: user.id,
+                email: user.email
             });
         }
 
@@ -205,17 +219,91 @@ export const verifyEmail = async (req, res, next) => {
             });
         }
 
+        // Check if code has expired
+        if (user.verificationCodeExpiry && new Date() > user.verificationCodeExpiry) {
+            return res.status(400).json({
+                success: false,
+                message: 'Verification code has expired. Please request a new one.',
+                expired: true
+            });
+        }
+
         await prisma.user.update({
             where: { id: userId },
             data: {
                 emailVerified: true,
-                verificationCode: null, // Clear code after verification
+                verificationCode: null,
+                verificationCodeExpiry: null, // Clear expiry too
             },
         });
 
         res.json({
             success: true,
             message: 'Email verified successfully.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Resend verification code
+ * POST /api/auth/resend-verification
+ */
+export const resendVerificationCode = async (req, res, next) => {
+    try {
+        const { userId } = req.body;
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found.',
+            });
+        }
+
+        if (user.emailVerified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already verified.',
+            });
+        }
+
+        // Rate limiting: Check if last code was sent less than 60 seconds ago
+        if (user.verificationCodeExpiry) {
+            const timeSinceLastCode = Date.now() - (user.verificationCodeExpiry.getTime() - 15 * 60 * 1000);
+            if (timeSinceLastCode < 60000) { // 60 seconds
+                const waitTime = Math.ceil((60000 - timeSinceLastCode) / 1000);
+                return res.status(429).json({
+                    success: false,
+                    message: `Please wait ${waitTime} seconds before requesting a new code.`,
+                    waitTime
+                });
+            }
+        }
+
+        // Generate new code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                verificationCode,
+                verificationCodeExpiry,
+            },
+        });
+
+        // Send email
+        await sendVerificationEmail(user.email, user.fullName, verificationCode);
+
+        res.json({
+            success: true,
+            message: 'Verification code resent successfully.',
+            expiresIn: 900 // 15 minutes in seconds
         });
     } catch (error) {
         next(error);
