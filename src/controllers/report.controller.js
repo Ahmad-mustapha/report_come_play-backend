@@ -13,9 +13,17 @@ export const getAllReports = async (req, res, next) => {
         const skip = (page - 1) * limit;
 
         const where = {};
+
+        // If not admin, restrict to own reports
+        if (req.user.role !== 'ADMIN') {
+            where.userId = req.user.id;
+        } else if (userId) {
+            // Admins can filter by specific userId if provided
+            where.userId = userId;
+        }
+
         if (status) where.status = status;
         if (fieldId) where.fieldId = fieldId;
-        if (userId) where.userId = userId;
 
         const [reports, total] = await Promise.all([
             prisma.report.findMany({

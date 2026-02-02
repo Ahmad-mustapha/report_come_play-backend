@@ -13,7 +13,15 @@ export const getAllFields = async (req, res, next) => {
         const skip = (page - 1) * limit;
 
         const where = {};
-        if (ownerId) where.ownerId = ownerId;
+
+        // If not admin, restrict to own fields
+        if (req.user.role !== 'ADMIN') {
+            where.ownerId = req.user.id;
+        } else if (ownerId) {
+            // Admins can filter by specific ownerId if provided
+            where.ownerId = ownerId;
+        }
+
         if (status) where.status = status;
 
         const [fields, total] = await Promise.all([
