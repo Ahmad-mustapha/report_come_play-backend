@@ -1,0 +1,11 @@
+config:
+  target: "https://report-come-play-backend.onrender.com"
+  phases:
+    - duration: 30
+      arrivalRate: 10
+
+scenarios:
+  - name: Health check
+    flow:
+      - get:
+          url: "/health"
