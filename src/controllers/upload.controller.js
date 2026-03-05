@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Upload a file to Supabase Storage
- * POST /api/upload
+ * POST /api/v1/upload
  */
 export const uploadImage = async (req, res, next) => {
     try {

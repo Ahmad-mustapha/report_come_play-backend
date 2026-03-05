@@ -17,6 +17,7 @@ model User {
   fullName      String
   role          String    @default("REPORTER") // REPORTER, OWNER, ADMIN
   phoneNumber      String?
+  avatar           String?
   bankName         String?
   accountNumber    String?
   accountName      String?
@@ -47,6 +48,9 @@ model Field {
   fieldSize     String?
   availability  String?
   contactInfo   String?
+  access        String?
+  managerName   String?
+  managerContact String?
   latitude      Float?
   longitude     Float?
   images        Json     @default("[]")

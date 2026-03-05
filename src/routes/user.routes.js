@@ -14,5 +14,6 @@ router.get('/payouts', userController.getUserPayouts);
 router.get('/notifications', userController.getNotifications);
 router.put('/notifications/read-all', userController.markAllNotificationsAsRead);
 router.put('/notifications/:id/read', userController.markNotificationAsRead);
+router.put('/change-password', userController.changePassword);
 
 export default router;

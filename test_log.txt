@@ -1,0 +1,6 @@
+--- START ---
+GET http://localhost:5000/health => 200 OK
+GET http://localhost:5000/api/v1/auth/me => 401 Unauthorized
+POST http://localhost:5000/api/v1/auth/login => 400 Bad Request
+GET http://localhost:5000/api/v1/fields => 401 Unauthorized
+--- END ---

@@ -3,7 +3,7 @@ import { hashPassword, comparePassword } from '../utils/password.util.js';
 
 /**
  * Get user profile
- * GET /api/users/profile
+ * GET /api/v1/users/profile
  */
 export const getProfile = async (req, res, next) => {
     try {
@@ -14,6 +14,7 @@ export const getProfile = async (req, res, next) => {
                 email: true,
                 fullName: true,
                 role: true,
+                avatar: true,
                 phoneNumber: true,
                 bankName: true,
                 accountNumber: true,
@@ -35,15 +36,16 @@ export const getProfile = async (req, res, next) => {
 
 /**
  * Update user profile
- * PUT /api/users/profile
+ * PUT /api/v1/users/profile
  */
 export const updateProfile = async (req, res, next) => {
     try {
-        const { fullName, phoneNumber, bankName, accountNumber, accountName, currentPassword, newPassword } = req.body;
+        const { fullName, phoneNumber, avatar, bankName, accountNumber, accountName, currentPassword, newPassword } = req.body;
 
         const updateData = {};
         if (fullName) updateData.fullName = fullName;
         if (phoneNumber) updateData.phoneNumber = phoneNumber;
+        if (avatar) updateData.avatar = avatar;
         if (bankName) updateData.bankName = bankName;
         if (accountNumber) updateData.accountNumber = accountNumber;
         if (accountName) updateData.accountName = accountName;
@@ -73,6 +75,7 @@ export const updateProfile = async (req, res, next) => {
                 email: true,
                 fullName: true,
                 role: true,
+                avatar: true,
                 phoneNumber: true,
                 bankName: true,
                 accountNumber: true,
@@ -94,7 +97,7 @@ export const updateProfile = async (req, res, next) => {
 
 /**
  * Get user's own reports
- * GET /api/users/reports
+ * GET /api/v1/users/reports
  */
 export const getUserReports = async (req, res, next) => {
     try {
@@ -136,7 +139,7 @@ export const getUserReports = async (req, res, next) => {
 
 /**
  * Get user's payouts
- * GET /api/users/payouts
+ * GET /api/v1/users/payouts
  */
 export const getUserPayouts = async (req, res, next) => {
     try {
@@ -156,7 +159,7 @@ export const getUserPayouts = async (req, res, next) => {
 
 /**
  * Get user's notifications
- * GET /api/users/notifications
+ * GET /api/v1/users/notifications
  */
 export const getNotifications = async (req, res, next) => {
     try {
@@ -177,7 +180,7 @@ export const getNotifications = async (req, res, next) => {
 
 /**
  * Mark a notification as read
- * PUT /api/users/notifications/:id/read
+ * PUT /api/v1/users/notifications/:id/read
  */
 export const markNotificationAsRead = async (req, res, next) => {
     try {
@@ -202,7 +205,7 @@ export const markNotificationAsRead = async (req, res, next) => {
 
 /**
  * Mark all notifications as read
- * PUT /api/users/notifications/read-all
+ * PUT /api/v1/users/notifications/read-all
  */
 export const markAllNotificationsAsRead = async (req, res, next) => {
     try {
@@ -217,6 +220,42 @@ export const markAllNotificationsAsRead = async (req, res, next) => {
         res.json({
             success: true,
             message: 'All notifications marked as read.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Change password
+ * PUT /api/v1/users/change-password
+ */
+export const changePassword = async (req, res, next) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+        });
+
+        const isPasswordValid = await comparePassword(currentPassword, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Current password is incorrect.',
+            });
+        }
+
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: {
+                password: await hashPassword(newPassword),
+            },
+        });
+
+        res.json({
+            success: true,
+            message: 'Password changed successfully.',
         });
     } catch (error) {
         next(error);

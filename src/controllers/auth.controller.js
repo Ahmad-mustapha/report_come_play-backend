@@ -6,7 +6,7 @@ import { sendVerificationEmail } from '../utils/mail.util.js';
 
 /**
  * Register a new user
- * POST /api/auth/register
+ * POST /api/v1/auth/register
  */
 export const register = async (req, res, next) => {
     try {
@@ -94,7 +94,7 @@ export const register = async (req, res, next) => {
 
 /**
  * Login user
- * POST /api/auth/login
+ * POST /api/v1/auth/login
  */
 export const login = async (req, res, next) => {
     try {
@@ -166,7 +166,7 @@ export const login = async (req, res, next) => {
 
 /**
  * Get current user
- * GET /api/auth/me
+ * GET /api/v1/auth/me
  */
 export const getCurrentUser = async (req, res, next) => {
     try {
@@ -195,7 +195,7 @@ export const getCurrentUser = async (req, res, next) => {
 
 /**
  * Verify email with code
- * POST /api/auth/verify-email
+ * POST /api/v1/auth/verify-email
  */
 export const verifyEmail = async (req, res, next) => {
     try {
@@ -248,7 +248,7 @@ export const verifyEmail = async (req, res, next) => {
 
 /**
  * Resend verification code
- * POST /api/auth/resend-verification
+ * POST /api/v1/auth/resend-verification
  */
 export const resendVerificationCode = async (req, res, next) => {
     try {

@@ -9,7 +9,7 @@ import fieldRoutes from './routes/field.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware.js';
-import { apiLimiter, authLimiter, submissionLimiter } from './middleware/rateLimit.middleware.js';
+import { globalLimiter, authLimiter, submissionLimiter } from './middleware/rateLimit.middleware.js';
 // Load environment variables (already loaded by 'dotenv/config' import)
 // dotenv.config();
 
@@ -71,12 +71,12 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/fields', fieldRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/fields', fieldRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/upload', uploadRoutes);
 
 // Error handling
 app.use(notFoundHandler);
@@ -90,7 +90,7 @@ app.listen(PORT, () => {
 ╠═══════════════════════════════════════════╣
 ║   Port: ${PORT}                           ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}               ║
-║   API: http://localhost:${PORT}/api       ║
+║   API: http://localhost:${PORT}/api/v1    ║
 ╚═══════════════════════════════════════════╝
   `);
 });

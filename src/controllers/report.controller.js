@@ -3,7 +3,7 @@ import { validationResult } from 'express-validator';
 
 /**
  * Get all reports (with filters)
- * GET /api/reports
+ * GET /api/v1/reports
  */
 export const getAllReports = async (req, res, next) => {
     try {
@@ -62,7 +62,7 @@ export const getAllReports = async (req, res, next) => {
 
 /**
  * Get single report by ID
- * GET /api/reports/:id
+ * GET /api/v1/reports/:id
  */
 export const getReportById = async (req, res, next) => {
     try {
@@ -98,7 +98,7 @@ export const getReportById = async (req, res, next) => {
 
 /**
  * Create a new report
- * POST /api/reports
+ * POST /api/v1/reports
  */
 export const createReport = async (req, res, next) => {
     try {
@@ -146,7 +146,7 @@ export const createReport = async (req, res, next) => {
 
 /**
  * Update a report
- * PUT /api/reports/:id
+ * PUT /api/v1/reports/:id
  */
 export const updateReport = async (req, res, next) => {
     try {
@@ -214,7 +214,7 @@ export const updateReport = async (req, res, next) => {
 
 /**
  * Delete a report
- * DELETE /api/reports/:id
+ * DELETE /api/v1/reports/:id
  */
 export const deleteReport = async (req, res, next) => {
     try {

@@ -3,7 +3,7 @@ import { validationResult } from 'express-validator';
 
 /**
  * Get all fields
- * GET /api/fields
+ * GET /api/v1/fields
  */
 export const getAllFields = async (req, res, next) => {
     try {
@@ -69,7 +69,7 @@ export const getAllFields = async (req, res, next) => {
 
 /**
  * Get single field by ID
- * GET /api/fields/:id
+ * GET /api/v1/fields/:id
  */
 export const getFieldById = async (req, res, next) => {
     try {
@@ -119,7 +119,7 @@ export const getFieldById = async (req, res, next) => {
 
 /**
  * Create a new field (Owners only)
- * POST /api/fields
+ * POST /api/v1/fields
  */
 export const createField = async (req, res, next) => {
     try {
@@ -136,6 +136,9 @@ export const createField = async (req, res, next) => {
             fieldSize,
             availability,
             contactInfo,
+            access,
+            managerName,
+            managerContact,
             latitude,
             longitude,
             images
@@ -242,6 +245,9 @@ export const createField = async (req, res, next) => {
                 fieldSize,
                 availability: availability?.trim(),
                 contactInfo: contactInfo?.trim(),
+                managerName: managerName?.trim(),
+                managerContact: managerContact?.trim(),
+                access: access?.trim(),
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null,
                 images: images || [],
@@ -266,12 +272,27 @@ export const createField = async (req, res, next) => {
 
 /**
  * Update a field
- * PUT /api/fields/:id
+ * PUT /api/v1/fields/:id
  */
 export const updateField = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, location, description, status } = req.body;
+        const {
+            name,
+            location,
+            description,
+            surfaceType,
+            fieldSize,
+            availability,
+            contactInfo,
+            access,
+            managerName,
+            managerContact,
+            latitude,
+            longitude,
+            images,
+            status
+        } = req.body;
 
         const existingField = await prisma.field.findUnique({
             where: { id },
@@ -292,7 +313,25 @@ export const updateField = async (req, res, next) => {
             });
         }
 
-        const updateData = { name, location, description };
+        const updateData = {};
+        if (name) updateData.name = name.trim().replace(/\s+/g, ' ');
+        if (location) updateData.location = location.trim().replace(/\s+/g, ' ');
+        if (description !== undefined) updateData.description = description?.trim();
+        if (surfaceType) updateData.surfaceType = surfaceType;
+        if (fieldSize) updateData.fieldSize = fieldSize;
+        if (availability !== undefined) updateData.availability = availability?.trim();
+        if (contactInfo !== undefined) updateData.contactInfo = contactInfo?.trim();
+        if (access !== undefined) updateData.access = access?.trim();
+        if (managerName !== undefined) updateData.managerName = managerName?.trim();
+        if (managerContact !== undefined) updateData.managerContact = managerContact?.trim();
+        if (latitude !== undefined) updateData.latitude = latitude ? parseFloat(latitude) : null;
+        if (longitude !== undefined) updateData.longitude = longitude ? parseFloat(longitude) : null;
+        if (images && images.length === 3) updateData.images = images;
+
+        // Only admins can update status via this or a dedicated endpoint (usually dedicated)
+        if (req.user.role === 'ADMIN' && status) {
+            updateData.status = status;
+        }
 
         const field = await prisma.field.update({
             where: { id },
@@ -316,7 +355,7 @@ export const updateField = async (req, res, next) => {
 
 /**
  * Delete a field
- * DELETE /api/fields/:id
+ * DELETE /api/v1/fields/:id
  */
 export const deleteField = async (req, res, next) => {
     try {

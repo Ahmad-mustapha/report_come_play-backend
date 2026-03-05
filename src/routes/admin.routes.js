@@ -12,6 +12,7 @@ router.use(requireAdmin);
 // User management
 router.get('/users', adminController.getAllUsers);
 router.get('/users/:id', adminController.getUserById);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Payout management
 router.get('/payouts', adminController.getAllPayouts);

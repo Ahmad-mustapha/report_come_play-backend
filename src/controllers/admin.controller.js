@@ -2,7 +2,7 @@ import prisma from '../config/database.js';
 
 /**
  * Get all users (Admin only)
- * GET /api/admin/users
+ * GET /api/v1/admin/users
  */
 export const getAllUsers = async (req, res, next) => {
     try {
@@ -62,7 +62,7 @@ export const getAllUsers = async (req, res, next) => {
 
 /**
  * Get user by ID (Admin only)
- * GET /api/admin/users/:id
+ * GET /api/v1/admin/users/:id
  */
 export const getUserById = async (req, res, next) => {
     try {
@@ -105,7 +105,7 @@ export const getUserById = async (req, res, next) => {
 
 /**
  * Get all payouts (Admin only)
- * GET /api/admin/payouts
+ * GET /api/v1/admin/payouts
  */
 export const getAllPayouts = async (req, res, next) => {
     try {
@@ -152,7 +152,7 @@ export const getAllPayouts = async (req, res, next) => {
 
 /**
  * Create a payout (Admin only)
- * POST /api/admin/payouts
+ * POST /api/v1/admin/payouts
  */
 export const createPayout = async (req, res, next) => {
     try {
@@ -206,7 +206,7 @@ export const createPayout = async (req, res, next) => {
 
 /**
  * Update payout (Admin only)
- * PUT /api/admin/payouts/:id
+ * PUT /api/v1/admin/payouts/:id
  */
 export const updatePayout = async (req, res, next) => {
     try {
@@ -249,7 +249,7 @@ export const updatePayout = async (req, res, next) => {
 
 /**
  * Get dashboard stats (Admin only)
- * GET /api/admin/stats
+ * GET /api/v1/admin/stats
  */
 export const getDashboardStats = async (req, res, next) => {
     try {
@@ -263,6 +263,7 @@ export const getDashboardStats = async (req, res, next) => {
             totalFields,
             pendingFields,
             approvedFields,
+            rejectedFields,
             totalReports,
             pendingReports,
             totalPayouts,
@@ -278,6 +279,7 @@ export const getDashboardStats = async (req, res, next) => {
             prisma.field.count(),
             prisma.field.count({ where: { status: 'PENDING' } }),
             prisma.field.count({ where: { status: 'APPROVED' } }),
+            prisma.field.count({ where: { status: 'REJECTED' } }),
             prisma.report.count(),
             prisma.report.count({ where: { status: 'PENDING' } }),
             prisma.payout.count(),
@@ -390,7 +392,7 @@ export const getDashboardStats = async (req, res, next) => {
             data: {
                 stats: {
                     users: { total: totalUsers, reporters: totalReporters, owners: totalOwners },
-                    fields: { total: totalFields, pending: pendingFields, approved: approvedFields },
+                    fields: { total: totalFields, pending: pendingFields, approved: approvedFields, rejected: rejectedFields },
                     reports: { total: totalReports, pending: pendingReports },
                     payouts: {
                         total: totalPayouts,
@@ -409,9 +411,46 @@ export const getDashboardStats = async (req, res, next) => {
 };
 
 /**
- * Verify a field (Admin only)
- * PUT /api/admin/fields/:id/verify
+ * Delete a user (Admin only)
+ * DELETE /api/v1/admin/users/:id
  */
+export const deleteUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Verify the user is not an admin
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: { role: true }
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found.',
+            });
+        }
+
+        if (user.role === 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot delete an administrator account.',
+            });
+        }
+
+        await prisma.user.delete({
+            where: { id },
+        });
+
+        res.json({
+            success: true,
+            message: 'User access has been permanently terminated.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const verifyField = async (req, res, next) => {
     try {
         const { id } = req.params;
