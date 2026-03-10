@@ -1,5 +1,5 @@
 import { verifyToken } from '../utils/jwt.util.js';
-import prisma from '../config/database.js';
+import prisma from '../lib/prisma.js';
 
 /**
  * Middleware to verify JWT token and attach user to request
@@ -21,7 +21,7 @@ export const authenticateToken = async (req, res, next) => {
         const decoded = verifyToken(token);
 
         // Get user from database
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { id: decoded.userId },
             select: {
                 id: true,
@@ -69,7 +69,7 @@ export const optionalAuth = async (req, res, next) => {
 
         if (token) {
             const decoded = verifyToken(token);
-            const user = await prisma.user.findUnique({
+            const user = await prisma.user.findFirst({
                 where: { id: decoded.userId },
                 select: {
                     id: true,

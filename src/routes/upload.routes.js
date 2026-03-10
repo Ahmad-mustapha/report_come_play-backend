@@ -6,7 +6,7 @@ import { submissionLimiter } from '../middleware/rateLimit.middleware.js';
 
 const router = express.Router();
 
-// Multer Config (Storage in memory, we pass to Supabase)
+// Multer Config (Storage in memory, we pass to Cloudflare R2)
 const storage = multer.memoryStorage();
 const upload = multer({
     storage,

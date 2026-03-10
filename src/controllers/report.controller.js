@@ -1,4 +1,4 @@
-import prisma from '../config/database.js';
+import prisma from '../lib/prisma.js';
 import { validationResult } from 'express-validator';
 
 /**
@@ -67,8 +67,9 @@ export const getAllReports = async (req, res, next) => {
 export const getReportById = async (req, res, next) => {
     try {
         const { id } = req.params;
+        console.log(`📃 [REPORT] Fetching report: ${id}`);
 
-        const report = await prisma.report.findUnique({
+        const report = await prisma.report.findFirst({
             where: { id },
             include: {
                 user: {
@@ -108,9 +109,10 @@ export const createReport = async (req, res, next) => {
         }
 
         const { content, fieldId } = req.body;
+        console.log(`➕ [REPORT] Creating report for field: ${fieldId} by user: ${req.user.id}`);
 
         // Verify field exists
-        const field = await prisma.field.findUnique({ where: { id: fieldId } });
+        const field = await prisma.field.findFirst({ where: { id: fieldId } });
         if (!field) {
             return res.status(404).json({
                 success: false,
@@ -152,9 +154,10 @@ export const updateReport = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { content, status } = req.body;
+        console.log(`📝 [REPORT] Update request for: ${id}`);
 
         // Find existing report
-        const existingReport = await prisma.report.findUnique({
+        const existingReport = await prisma.report.findFirst({
             where: { id },
         });
 
@@ -219,8 +222,9 @@ export const updateReport = async (req, res, next) => {
 export const deleteReport = async (req, res, next) => {
     try {
         const { id } = req.params;
+        console.log(`🗑️ [REPORT] Delete request for: ${id}`);
 
-        const existingReport = await prisma.report.findUnique({
+        const existingReport = await prisma.report.findFirst({
             where: { id },
         });
 

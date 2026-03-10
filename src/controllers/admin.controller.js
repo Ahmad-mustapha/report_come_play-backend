@@ -1,4 +1,4 @@
-import prisma from '../config/database.js';
+import prisma from '../lib/prisma.js';
 
 /**
  * Get all users (Admin only)
@@ -67,8 +67,9 @@ export const getAllUsers = async (req, res, next) => {
 export const getUserById = async (req, res, next) => {
     try {
         const { id } = req.params;
+        console.log(`👨‍🔧 [ADMIN] Fetching user: ${id}`);
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { id },
             select: {
                 id: true,
@@ -157,9 +158,10 @@ export const getAllPayouts = async (req, res, next) => {
 export const createPayout = async (req, res, next) => {
     try {
         const { userId, amount, status, receiptUrl } = req.body;
+        console.log(`💰 [ADMIN] Creating payout for user: ${userId}`);
 
         // Verify user exists
-        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const user = await prisma.user.findFirst({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -368,7 +370,7 @@ export const getDashboardStats = async (req, res, next) => {
         // 2. Fetch user details and total field counts for these users
         const topReporters = await Promise.all(
             approvedCounts.map(async (item) => {
-                const user = await prisma.user.findUnique({
+                const user = await prisma.user.findFirst({
                     where: { id: item.ownerId },
                     select: {
                         id: true,
@@ -417,9 +419,10 @@ export const getDashboardStats = async (req, res, next) => {
 export const deleteUser = async (req, res, next) => {
     try {
         const { id } = req.params;
+        console.log(`🚨 [ADMIN] Attempting user deletion: ${id}`);
 
         // Verify the user is not an admin
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { id },
             select: { role: true }
         });

@@ -1,0 +1,579 @@
+openapi: 3.0.3
+info:
+  title: Report Come Play - API Documentation
+  description: |
+    Comprehensive API documentation for the Report Come Play platform. 
+    This API handles user authentication, scouting report submissions, field management, and administrative payouts.
+    
+    ### Authentication
+    Most endpoints require a JWT Bearer token. 
+    To authenticate, use the `/auth/login` endpoint and include the returned token in the headers of subsequent requests:
+    `Authorization: Bearer <your_token>`
+  version: 1.0.0
+  contact:
+    name: Musben
+    url: https://comeplayapp.com
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+  - url: https://api.comeplayapp.com/api/v1
+    description: Production Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string, example: "cln123456789" }
+        email: { type: string, format: email, example: "scout@example.com" }
+        fullName: { type: string, example: "John Doe" }
+        role: { type: string, enum: [REPORTER, OWNER, ADMIN], example: "REPORTER" }
+        phoneNumber: { type: string, example: "+2348000000000" }
+        avatar: { type: string, example: "https://r2.dev/avatars/john.jpg" }
+        emailVerified: { type: boolean, example: true }
+        bankName: { type: string, example: "GTBank" }
+        accountNumber: { type: string, example: "0123456789" }
+        accountName: { type: string, example: "John Doe" }
+
+    Field:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string, example: "Legacy Pitch" }
+        location: { type: string, example: "Lagos, Nigeria" }
+        description: { type: string }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+        surfaceType: { type: string }
+        fieldSize: { type: string }
+        ownerId: { type: string }
+        images:
+          type: array
+          items: { type: string }
+
+    Report:
+      type: object
+      properties:
+        id: { type: string }
+        content: { type: string, example: "Pitch surface is 5/5, security is high." }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED] }
+        userId: { type: string }
+        fieldId: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    Payout:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        amount: { type: number, example: 50000 }
+        status: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED] }
+        processedAt: { type: string, format: date-time }
+        receiptUrl: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        message: { type: string }
+        read: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+paths:
+  # --- AUTHENTICATION ---
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, fullName]
+              properties:
+                email: { type: string }
+                password: { type: string, minLength: 6 }
+                fullName: { type: string }
+                phoneNumber: { type: string }
+      responses:
+        201:
+          description: Created
+        409:
+          description: User already exists
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+
+  /auth/verify-email:
+    post:
+      tags: [Authentication]
+      summary: Verify user email with 6-digit code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string }
+                code: { type: string, example: "123456" }
+      responses:
+        200:
+          description: Email verified
+
+  /auth/resend-verification:
+    post:
+      tags: [Authentication]
+      summary: Resend email verification code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        200:
+          description: Code resent
+
+  /auth/forgot-password:
+    post:
+      tags: [Authentication]
+      summary: Request password reset code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        200:
+          description: Reset code sent (if account exists)
+
+  /auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Reset password using verification code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, newPassword]
+              properties:
+                email: { type: string }
+                code: { type: string }
+                newPassword: { type: string }
+      responses:
+        200:
+          description: Password updated
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current authenticated user profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: User data
+
+  # --- USER OPERATIONS ---
+  /users/profile:
+    get:
+      tags: [User]
+      summary: Get full user profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Profile data
+    put:
+      tags: [User]
+      summary: Update profile info or bank details
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName: { type: string }
+                phoneNumber: { type: string }
+                avatar: { type: string }
+                bankName: { type: string }
+                accountNumber: { type: string }
+                accountName: { type: string }
+      responses:
+        200:
+          description: Updated
+
+  /users/change-password:
+    put:
+      tags: [User]
+      summary: Change password while logged in
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        200:
+          description: Changed
+
+  /users/reports:
+    get:
+      tags: [User]
+      summary: Get reports submitted by the authenticated user
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: List of reports
+
+  /users/payouts:
+    get:
+      tags: [User]
+      summary: Get authenticated user's payout history
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: List of payouts
+
+  /users/payouts/{id}:
+    get:
+      tags: [User]
+      summary: Get single payout details (includes receipt)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Payout data
+
+  /users/notifications:
+    get:
+      tags: [User]
+      summary: Get user notifications
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Notifications list
+
+  /users/notifications/read-all:
+    put:
+      tags: [User]
+      summary: Mark all notifications as read
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Success
+
+  /users/notifications/{id}/read:
+    put:
+      tags: [User]
+      summary: Mark specific notification as read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Success
+
+  # --- FIELD OPERATIONS ---
+  /fields:
+    get:
+      tags: [Fields]
+      summary: List all stadiums/fields
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: List of fields
+    post:
+      tags: [Fields]
+      summary: Submit a new stadium field
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, location]
+              properties:
+                name: { type: string }
+                location: { type: string }
+                description: { type: string }
+                images: { type: array, items: { type: string } }
+      responses:
+        201:
+          description: Created
+
+  /fields/{id}:
+    get:
+      tags: [Fields]
+      summary: Get details of a specific field
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Field details
+    put:
+      tags: [Fields]
+      summary: Update field information
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Field' }
+      responses:
+        200:
+          description: Updated
+    delete:
+      tags: [Fields]
+      summary: Delete a field
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Deleted
+
+  # --- REPORT OPERATIONS ---
+  /reports:
+    get:
+      tags: [Reports]
+      summary: Get all reports (requires proper role)
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: List
+    post:
+      tags: [Reports]
+      summary: Post a scouting intelligence report
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, fieldId]
+              properties:
+                content: { type: string }
+                fieldId: { type: string }
+      responses:
+        201:
+          description: Submitted
+
+  /reports/{id}:
+    get:
+      tags: [Reports]
+      summary: Get single report detail
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Report data
+    put:
+      tags: [Reports]
+      summary: Update report
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Updated
+    delete:
+      tags: [Reports]
+      summary: Delete report
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Deleted
+
+  # --- UPLOAD ---
+  /upload:
+    post:
+      tags: [Upload]
+      summary: Single image upload to R2
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        200:
+          description: JSON with public URL
+
+  # --- ADMIN OPERATIONS ---
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Get system-wide statistics
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Analytics data
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all platform users
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Users list
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Get user details
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: User data
+    delete:
+      tags: [Admin]
+      summary: Remove user account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Success
+
+  /admin/fields/{id}/verify:
+    put:
+      tags: [Admin]
+      summary: Verify/Approve a stadium submission
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [APPROVED, REJECTED] }
+      responses:
+        200:
+          description: Updated
+
+  /admin/payouts:
+    get:
+      tags: [Admin]
+      summary: List all system payouts
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Payouts list
+    post:
+      tags: [Admin]
+      summary: Disburse a reward to a user
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, amount]
+              properties:
+                userId: { type: string }
+                amount: { type: number }
+                receiptUrl: { type: string }
+      responses:
+        201:
+          description: Payout initialized
+
+  /admin/payouts/{id}:
+    put:
+      tags: [Admin]
+      summary: Update payout status or proof
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Updated

@@ -25,12 +25,28 @@ const loginValidation = [
     body('password').notEmpty().withMessage('Password is required'),
 ];
 
+const forgotPasswordValidation = [
+    body('email').isEmail().withMessage('Valid email is required'),
+];
+
+const resetPasswordValidation = [
+    body('email').isEmail().withMessage('Valid email is required'),
+    body('code').isLength({ min: 6, max: 6 }).withMessage('Reset code must be 6 digits'),
+    body('newPassword')
+        .isLength({ min: 6 })
+        .withMessage('Password must be at least 6 characters')
+        .matches(/\d/)
+        .withMessage('Password must contain at least one number'),
+];
+
 // Routes
 router.post('/register', authLimiter, registerValidation, authController.register);
 router.post('/login', authLimiter, loginValidation, authController.login);
 router.get('/me', authenticateToken, authController.getCurrentUser);
 router.post('/verify-email', authController.verifyEmail);
 router.post('/resend-verification', authLimiter, authController.resendVerificationCode);
+router.post('/forgot-password', authLimiter, forgotPasswordValidation, authController.forgotPassword);
+router.post('/reset-password', authLimiter, resetPasswordValidation, authController.resetPassword);
 
 
 export default router;

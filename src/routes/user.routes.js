@@ -11,6 +11,7 @@ router.get('/profile', userController.getProfile);
 router.put('/profile', userController.updateProfile);
 router.get('/reports', userController.getUserReports);
 router.get('/payouts', userController.getUserPayouts);
+router.get('/payouts/:id', userController.getPayoutById);
 router.get('/notifications', userController.getNotifications);
 router.put('/notifications/read-all', userController.markAllNotificationsAsRead);
 router.put('/notifications/:id/read', userController.markNotificationAsRead);

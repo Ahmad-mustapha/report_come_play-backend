@@ -1,4 +1,4 @@
-import prisma from '../config/database.js';
+import prisma from '../lib/prisma.js';
 import { hashPassword, comparePassword } from '../utils/password.util.js';
 
 /**
@@ -7,7 +7,8 @@ import { hashPassword, comparePassword } from '../utils/password.util.js';
  */
 export const getProfile = async (req, res, next) => {
     try {
-        const user = await prisma.user.findUnique({
+        console.log(`👤 [USER] Fetching profile for: ${req.user.id}`);
+        const user = await prisma.user.findFirst({
             where: { id: req.user.id },
             select: {
                 id: true,
@@ -49,10 +50,12 @@ export const updateProfile = async (req, res, next) => {
         if (bankName) updateData.bankName = bankName;
         if (accountNumber) updateData.accountNumber = accountNumber;
         if (accountName) updateData.accountName = accountName;
+        // Role updates are strictly forbidden via this endpoint to prevent privilege escalation
 
         // If updating password
         if (currentPassword && newPassword) {
-            const user = await prisma.user.findUnique({
+            console.log(`🔐 [USER] Password update attempt for: ${req.user.id}`);
+            const user = await prisma.user.findFirst({
                 where: { id: req.user.id },
             });
 
@@ -233,8 +236,9 @@ export const markAllNotificationsAsRead = async (req, res, next) => {
 export const changePassword = async (req, res, next) => {
     try {
         const { currentPassword, newPassword } = req.body;
+        console.log(`🔐 [USER] Change password request for: ${req.user.id}`);
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: { id: req.user.id },
         });
 
@@ -256,6 +260,36 @@ export const changePassword = async (req, res, next) => {
         res.json({
             success: true,
             message: 'Password changed successfully.',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get specific payout details
+ * GET /api/v1/users/payouts/:id
+ */
+export const getPayoutById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const payout = await prisma.payout.findFirst({
+            where: {
+                id,
+                userId: req.user.id
+            }
+        });
+
+        if (!payout) {
+            return res.status(404).json({
+                success: false,
+                message: 'Payout not found or unauthorized.'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: { payout }
         });
     } catch (error) {
         next(error);

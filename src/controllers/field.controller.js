@@ -1,4 +1,4 @@
-import prisma from '../config/database.js';
+import prisma from '../lib/prisma.js';
 import { validationResult } from 'express-validator';
 
 /**
@@ -74,8 +74,9 @@ export const getAllFields = async (req, res, next) => {
 export const getFieldById = async (req, res, next) => {
     try {
         const { id } = req.params;
+        console.log(`🔍 [FIELD] Fetching field: ${id}`);
 
-        const field = await prisma.field.findUnique({
+        const field = await prisma.field.findFirst({
             where: { id },
             include: {
                 owner: {
@@ -293,8 +294,9 @@ export const updateField = async (req, res, next) => {
             images,
             status
         } = req.body;
+        console.log(`📝 [FIELD] Update request for: ${id}`);
 
-        const existingField = await prisma.field.findUnique({
+        const existingField = await prisma.field.findFirst({
             where: { id },
         });
 
@@ -360,8 +362,9 @@ export const updateField = async (req, res, next) => {
 export const deleteField = async (req, res, next) => {
     try {
         const { id } = req.params;
+        console.log(`🗑️ [FIELD] Delete request for: ${id}`);
 
-        const existingField = await prisma.field.findUnique({
+        const existingField = await prisma.field.findFirst({
             where: { id },
         });
 

@@ -21,7 +21,7 @@ router.get('/:id', fieldController.getFieldById);
 
 // Only reporters and above can create fields
 router.post('/', submissionLimiter, requireReporter, fieldValidation, fieldController.createField);
-router.put('/:id', requireOwner, fieldValidation, fieldController.updateField);
-router.delete('/:id', requireOwner, fieldController.deleteField);
+router.put('/:id', requireReporter, fieldValidation, fieldController.updateField);
+router.delete('/:id', requireReporter, fieldController.deleteField);
 
 export default router;

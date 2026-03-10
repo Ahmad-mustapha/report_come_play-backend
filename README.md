@@ -57,14 +57,12 @@ npm install
 
 ### 2. Set Up Database
 
-**Option A: Using Supabase (Recommended for beginners)**
+**Option A: Using Neon (Recommended)**
 
-1. Go to [supabase.com](https://supabase.com) and create a free account
+1. Go to [neon.tech](https://neon.tech) and create a free account
 2. Create a new project
-3. Wait for the database to be provisioned (~1 minute)
-4. Go to **Settings** → **Database**
-5. Copy the **Connection String** (URI format)
-6. It will look like: `postgresql://postgres.xxxxx:password@xxx.supabase.co:5432/postgres`
+3. Copy the pooled **Connection String** from the dashboard.
+4. It will look like: `postgresql://neondb_owner:npg_xxx-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require`
 
 **Option B: Using Local PostgreSQL**
 
@@ -86,8 +84,8 @@ cp .env.example .env
 Edit `.env` and add your database connection string:
 
 ```env
-# Database (from Supabase or local PostgreSQL)
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+# Database (from Neon or local PostgreSQL)
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
 
 # Server
 PORT=5000
@@ -338,7 +336,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
 **Database connection error:**
 - Verify your `DATABASE_URL` is correct
 - Check if database is running (for local PostgreSQL)
-- For Supabase, ensure project is not paused
+- For Neon, ensure your connection string includes `sslmode=require`
 
 **Prisma Client error:**
 - Run `npm run prisma:generate`

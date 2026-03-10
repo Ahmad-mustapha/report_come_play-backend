@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import jwt from 'jsonwebtoken';
 
 
@@ -8,8 +9,10 @@ import jwt from 'jsonwebtoken';
  * @returns {string} JWT token
  */
 export const generateToken = (payload) => {
+    // payload should contain { userId: string, role: string }
     const secret = process.env.JWT_SECRET;
-    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    const expiresIn = process.env.JWT_EXPIRES_IN || '30d'; // Increased to 30 days for better persistence
+
     return jwt.sign(payload, secret, {
         expiresIn: expiresIn,
     });
@@ -22,7 +25,7 @@ export const generateToken = (payload) => {
  * @throws {Error} If token is invalid or expired
  */
 export const verifyToken = (token) => {
-    const secret = process.env.JWT_SECRET;
+    const secret = process.env.JWT_SECRET || 'fallback-dev-secret-change-me-in-prod';
     try {
         return jwt.verify(token, secret);
     } catch (error) {

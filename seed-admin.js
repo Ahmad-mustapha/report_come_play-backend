@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import prisma from './src/config/database.js';
+import prisma from './src/lib/prisma.js';
 import { hashPassword } from './src/utils/password.util.js';
 
 async function createAdmin() {
@@ -9,22 +9,28 @@ async function createAdmin() {
     const password = process.env.ADMIN_PASSWORD;
     const fullName = process.env.ADMIN_NAME;
 
-    try {
-        console.log(`Attempting to create admin: ${email}...`);
+    if (!email || !password) {
+        console.error('❌ ADMIN_EMAIL or ADMIN_PASSWORD not found in .env');
+        return;
+    }
 
-        // Check if admin exists
-        const existing = await prisma.user.findUnique({ where: { email } });
-        if (existing) {
-            console.log('Admin already exists! Skipping.');
-            return;
-        }
+    try {
+        const normalizedEmail = email.toLowerCase().trim();
+        console.log(`Attempting to seed admin: ${normalizedEmail}...`);
 
         const hashedPassword = await hashPassword(password);
 
-        // Create User with ADMIN role
-        const user = await prisma.user.create({
-            data: {
-                email,
+        // Upsert user with ADMIN role
+        const user = await prisma.user.upsert({
+            where: { email: normalizedEmail },
+            update: {
+                password: hashedPassword,
+                fullName,
+                role: 'ADMIN',
+                emailVerified: true,
+            },
+            create: {
+                email: normalizedEmail,
                 password: hashedPassword,
                 fullName,
                 role: 'ADMIN',
@@ -32,20 +38,24 @@ async function createAdmin() {
             }
         });
 
-        // Create Admin record
-        await prisma.admin.create({
-            data: {
+        // Ensure Admin record exists
+        await prisma.admin.upsert({
+            where: { userId: user.id },
+            update: {
+                permissions: { all: true }
+            },
+            create: {
                 userId: user.id,
                 permissions: { all: true }
             }
         });
 
-        console.log('✅ Admin Created Successfully!');
-        console.log('Email:', email);
+        console.log('✅ Admin Seeded Successfully!');
+        console.log('Email:', normalizedEmail);
         console.log('Password:', password);
         console.log('Role: ADMIN');
     } catch (error) {
-        console.error('❌ Error creating admin:', error);
+        console.error('❌ Error seeding admin:', error);
     } finally {
         await prisma.$disconnect();
     }
