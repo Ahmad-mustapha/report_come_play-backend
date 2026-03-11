@@ -275,16 +275,82 @@ Alternative dedicated endpoint for password changes.
 
 ### 2.3 Get User's Content (Reports, Payouts, Notifications)
 
-All of these use **GET** and require **Authentication (`Bearer Token`)**.
+All of these endpoints require **Authentication (`Bearer Token`)**.
 
-- **Get Own Reports:** `/users/reports?page=1&limit=10`
-- **Get Own Payouts:** `/users/payouts`
-- **Get Specific Payout Detail:** `/users/payouts/:id`
-- **Get Own Notifications:** `/users/notifications`
-- **Mark Notification Read:** `PUT /users/notifications/:id/read`
-- **Mark All Notifications Read:** `PUT /users/notifications/read-all`
+#### Get Own Reports
+- **URL**: `/users/reports?page=1&limit=10`
+- **Method**: `GET`
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "reports": [ /* Array of Report Objects */ ],
+    "pagination": { "total": 1, "page": 1, "limit": 10, "pages": 1 }
+  }
+}
+```
 
-*(Reports and Payouts return formatted paginated arrays)*
+#### Get Own Payouts
+- **URL**: `/users/payouts`
+- **Method**: `GET`
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "payouts": [ /* Array of Payout Objects */ ]
+  }
+}
+```
+
+#### Get Specific Payout Detail
+- **URL**: `/users/payouts/{id}`
+- **Method**: `GET`
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "payout": { /* Extended Payout Object Data */ }
+  }
+}
+```
+
+#### Get Own Notifications
+- **URL**: `/users/notifications`
+- **Method**: `GET`
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "notifications": [ /* Array of Notification Objects */ ]
+  }
+}
+```
+
+#### Mark Notification Read
+- **URL**: `/users/notifications/{id}/read`
+- **Method**: `PUT`
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Notification marked as read."
+}
+```
+
+#### Mark All Notifications Read
+- **URL**: `/users/notifications/read-all`
+- **Method**: `PUT`
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "All notifications marked as read."
+}
+```
 
 ---
 
@@ -367,16 +433,89 @@ Only users with a `REPORTER` or `OWNER` role can submit. Will verify fuzzy dedup
 ---
 
 ### 3.3 Update or Delete Field
-- **Update Field**: `PUT /fields/:id` (Provides exactly the same body as POST. Requires being the field's original creator.)
-- **Delete Field**: `DELETE /fields/:id`
+
+#### Update Field
+- **URL**: `/fields/{id}`
+- **Method**: `PUT`
+- **Authentication Required**: Yes (`Bearer Token`, must be the original creator or ADMIN)
+
+**Request Payload (All fields optional):**
+```json
+{
+  "name": "Updated Legacy Pitch",
+  "location": "New Surulere, Lagos",
+  "description": "Updated descriptions here",
+  "surfaceType": "Natural Grass",
+  "fieldSize": "7v7",
+  "managerName": "John Wick",
+  "images": [
+    "https://r2.dev/img1-new.jpg",
+    "https://r2.dev/img2.jpg",
+    "https://r2.dev/img3.jpg"
+  ]
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Field updated successfully.",
+  "data": { "field": { /* Updated Field Object */ } }
+}
+```
+
+#### Delete Field
+- **URL**: `/fields/{id}`
+- **Method**: `DELETE`
+- **Authentication Required**: Yes (`Bearer Token`, must be the original creator or ADMIN)
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Field deleted successfully."
+}
+```
 
 ---
 
 # 4. Report Operations
 
-### 4.1 Post a Scouting Report
-Submit intelligence on an existing field.
+### 4.1 Get All Reports
+Retrieves a paginated list of scouting reports.
+- **URL**: `/reports`
+- **Method**: `GET`
+- **Authentication Required**: Yes (`Bearer Token`)
+- **Query Params (Optional)**: `?page=1&limit=10&status=PENDING&fieldId={id}`
 
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "reports": [ /* Array of Report Objects */ ],
+    "pagination": { "total": 1, "page": 1, "limit": 10, "pages": 1 }
+  }
+}
+```
+
+### 4.2 Get Specific Report
+Fetches details of a single report.
+- **URL**: `/reports/{id}`
+- **Method**: `GET`
+- **Authentication Required**: Yes (`Bearer Token`)
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": { "report": { /* Report Object */ } }
+}
+```
+
+### 4.3 Post a Scouting Report
+Submit intelligence on an existing field.
 - **URL**: `/reports`
 - **Method**: `POST`
 - **Authentication Required**: Yes (`Bearer Token`)
@@ -384,7 +523,7 @@ Submit intelligence on an existing field.
 **Request Payload:**
 ```json
 {
-  "content": "The pitch requires maintenance. The artificial grass is wearing off in the penalty box.",
+  "content": "The pitch requires maintenance. The artificial grass is wearing off.",
   "fieldId": "fld123456"
 }
 ```
@@ -395,6 +534,44 @@ Submit intelligence on an existing field.
   "success": true,
   "message": "Report created successfully.",
   "data": { "report": { /* ... */ } }
+}
+```
+
+### 4.4 Update a Report
+Allows the original reporter (or an Admin) to update the content of a report. Admins: passing `status` will update the approval status.
+- **URL**: `/reports/{id}`
+- **Method**: `PUT`
+- **Authentication Required**: Yes (`Bearer Token`)
+
+**Request Payload:**
+```json
+{
+  "content": "Updated report documentation here.",
+  "status": "APPROVED" 
+}
+```
+*(Note: `status` is only processed if the user is an ADMIN)*
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Report updated successfully.",
+  "data": { "report": { /* Updated Report Object */ } }
+}
+```
+
+### 4.5 Delete a Report
+Deletes a specific report.
+- **URL**: `/reports/{id}`
+- **Method**: `DELETE`
+- **Authentication Required**: Yes (`Bearer Token`, must be the original creator or ADMIN)
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Report deleted successfully."
 }
 ```
 
@@ -427,38 +604,147 @@ A form field with the key `image` containing the actual binary file.
 # 6. Admin Operations 
 *(Requires `ADMIN` Role)*
 
-### 6.1 Admin: Platform Users
-- **List Users**: `GET /admin/users?role=REPORTER&page=1&limit=20`
-- **Get Specific User**: `GET /admin/users/:id`
-- **Delete User**: `DELETE /admin/users/:id` (Permanent termination)
+### 6.1 List Platform Users
+Retrieves a paginated list of users.
+- **URL**: `/admin/users`
+- **Method**: `GET`
+- **Query Params (Optional)**: `?role=REPORTER&page=1&limit=20`
 
-### 6.2 Admin: Analytics Details
-Calculates top reporters, recent activity, and graphical 7-day stats.
-- **URL**: `GET /admin/stats`
-
-### 6.3 Admin: Payout Distributions
-Initialize and issue system payout status signals.
-
-- **List All Payouts**: `GET /admin/payouts?status=PENDING&page=1`
-- **Create a Payout Request (POST /admin/payouts)**: 
+**Success Response (200 OK):**
 ```json
 {
-  "userId": "cln123",
+  "success": true,
+  "data": {
+    "users": [ /* Array of User Objects */ ],
+    "pagination": { "total": 1, "page": 1, "limit": 20, "pages": 1 }
+  }
+}
+```
+
+### 6.2 Get Specific User
+Fetches comprehensive details of a specific user.
+- **URL**: `/admin/users/{id}`
+- **Method**: `GET`
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": { /* Detailed User Object */ }
+}
+```
+
+### 6.3 Delete User
+Permanently terminates a user account (Administrators cannot be deleted).
+- **URL**: `/admin/users/{id}`
+- **Method**: `DELETE`
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "User access has been permanently terminated."
+}
+```
+
+### 6.4 Get System Statistics (Analytics)
+Fetches high-level metrics for dashboard graphs and totals.
+- **URL**: `/admin/stats`
+- **Method**: `GET`
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "stats": { /* users, fields, reports, payouts counts */ },
+    "charts": [ /* Activity for last 7 days */ ],
+    "recentActivity": [ /* Recently submitted fields */ ],
+    "topReporters": [ /* Top active users */ ]
+  }
+}
+```
+
+### 6.5 List All System Payouts
+Fetches all payout records across the system.
+- **URL**: `/admin/payouts`
+- **Method**: `GET`
+- **Query Params (Optional)**: `?status=PENDING&userId={id}&page=1&limit=20`
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "payouts": [ /* Array of Payout Objects */ ],
+    "pagination": { "total": 1, "page": 1, "limit": 20, "pages": 1 }
+  }
+}
+```
+
+### 6.6 Create a Payout
+Initializes a new payout record.
+- **URL**: `/admin/payouts`
+- **Method**: `POST`
+
+**Request Payload:**
+```json
+{
+  "userId": "cln123456789",
   "amount": 50000,
   "status": "COMPLETED",
-  "receiptUrl": "url_to_proof"
+  "receiptUrl": "https://r2.dev/receipts/proof123.jpg"
 }
 ```
-- **Update a Payout (PUT /admin/payouts/:id)**:
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Payout created successfully.",
+  "data": { "payout": { /* ... */ } }
+}
+```
+
+### 6.7 Update a Payout
+Updates the status or receipt of an existing payout.
+- **URL**: `/admin/payouts/{id}`
+- **Method**: `PUT`
+
+**Request Payload:**
 ```json
 {
   "status": "COMPLETED",
-  "receiptUrl": "url_to_proof"
+  "receiptUrl": "https://r2.dev/receipts/proof123.jpg"
 }
 ```
 
-### 6.4 Admin: Verify Field Submission Details
-Approve or reject a submitted stadium.
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Payout updated successfully.",
+  "data": { "payout": { /* ... */ } }
+}
+```
 
-- **URL**: `PUT /admin/fields/:id/verify`
-- **Body**: `{ "status": "APPROVED" }` (or `"REJECTED"`)
+### 6.8 Verify Field Submission
+Updates the verification status of a submitted field (e.g. APPROVED or REJECTED).
+- **URL**: `/admin/fields/{id}/verify`
+- **Method**: `PUT`
+
+**Request Payload:**
+```json
+{
+  "status": "APPROVED" 
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Field approved successfully.",
+  "data": { "field": { /* ... */ } }
+}
+```
