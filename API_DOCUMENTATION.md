@@ -1,470 +1,464 @@
-# Report Come Play - API Documentation
+# Report Come Play - Comprehensive API Documentation
 
-Comprehensive API documentation for the Report Come Play platform. 
-This API handles user authentication, scouting report submissions, field management, and administrative payouts.
+Welcome to the official API documentation for the **Report Come Play** platform. This API enables user authentication, profile management, field submissions, scouting reports, and admin payouts.
 
 ## 🔗 Base URLs
-All endpoints described in this document are relative to the following base URLs:
+All API requests must be prefixed with one of the following base URLs:
 
 - **Production Server**: `https://api.comeplayapp.com/api/v1`
 - **Local Development Server**: `http://localhost:5000/api/v1`
 
 ---
 
-## 🛡️ Authentication Instructions
-Most endpoints require a JWT Bearer token. 
-To authenticate, use the `/auth/login` endpoint and include the returned token in the headers of subsequent requests:
+## 🛡️ Authentication
+Most endpoints in this API require authentication using a **JSON Web Token (JWT)**. 
+When an endpoint requires authentication, you must include the token in the `Authorization` header of your HTTP request.
 
+**Header Format:**
 ```http
-Authorization: Bearer <your_token>
+Authorization: Bearer <your_jwt_token_here>
 ```
-*Tip: Ensure there is a space between `Bearer` and the token value.*
 
 ---
 
-## ❌ Common Error Responses
-The API uses standard HTTP status codes. Below are common error responses to expect if a request fails:
+## ❌ Common Standard Responses
+To keep the documentation clean, these standard error responses apply to most endpoints unless specified otherwise:
 
-- **400 Bad Request:** Missing or invalid fields in the request body.
-- **401 Unauthorized:** Invalid, expired, or missing Bearer token.
-- **403 Forbidden:** The authenticated user does not have permission (e.g., ADMIN only).
-- **404 Not Found:** The requested resource (User, Field, Report) does not exist.
-- **409 Conflict:** Resource already exists (e.g., email already registered).
-- **500 Internal Server Error:** An unexpected error occurred on the server.
+- **`400 Bad Request`**: The request body is malformed or missing required fields.
+- **`401 Unauthorized`**: You are not authenticated. The Bearer token is missing, invalid, or expired.
+- **`403 Forbidden`**: You are authenticated but do not have the required role, or email verification is required.
+- **`404 Not Found`**: The requested resource does not exist.
+- **`409 Conflict`**: Resource already exists (e.g., email already registered or exact field already reported).
+- **`429 Too Many Requests`**: Rate limiting exceeded (e.g. asking for verification resends too quickly).
+- **`500 Internal Server Error`**: An unexpected error occurred on the server.
 
-A typical error response body looks like this:
+Example Error Response Body:
 ```json
 {
   "success": false,
-  "message": "Invalid email or password",
-  "error": "UNAUTHORIZED"
+  "message": "A human-readable error message explaining what went wrong"
 }
 ```
 
 ---
 
-## Content Overview
-1. [Authentication Endpoints](#authentication-endpoints)
-2. [User Operations](#user-operations)
-3. [Field Operations](#field-operations)
-4. [Report Operations](#report-operations)
-5. [Upload](#upload)
-6. [Admin Operations](#admin-operations)
-7. [Data Models Schema](#data-models-schemas)
+# 1. Authentication Endpoints
 
----
+### 1.1 Register a New User
+Creates a new user account. On success, an email containing a 6-digit verification code will be sent to the user.
 
-## Authentication Endpoints
+- **URL**: `/auth/register`
+- **Method**: `POST`
+- **Authentication Required**: No
 
-### Register a new user
-- **URL:** `/auth/register`
-- **Method:** `POST`
-- **Responses:** `201 Created`, `409 User already exists`
-
-**Request Body:**
+**Request Payload:**
 ```json
 {
-  "email": "user@example.com",
-  "password": "securepassword123",
+  "email": "johndoe@example.com",
+  "password": "strongpassword123",
   "fullName": "John Doe",
-  "phoneNumber": "+2348000000000"
+  "phoneNumber": "+2348000000000",
+  "role": "REPORTER" 
+}
+```
+*Notes:* 
+- *`password` must be at least 6 characters and contain at least one number.*
+- *`role` is optional but accepted (must be either 'REPORTER' or 'OWNER'). Defaults to REPORTER.*
+- *`phoneNumber` is optional.*
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "User registered successfully. Please check your email for the verification code.",
+  "data": {
+    "user": {
+      "id": "cln123456789",
+      "email": "johndoe@example.com",
+      "fullName": "John Doe",
+      "role": "REPORTER",
+      "emailVerified": false,
+      "createdAt": "2023-10-12T10:00:00Z"
+    },
+    "token": "eyJhb..."
+  }
 }
 ```
 
-### Login user
-- **URL:** `/auth/login`
-- **Method:** `POST`
-- **Responses:** `200 Successful` (Returns Bearer token and User object)
+---
 
-**Request Body:**
+### 1.2 Login User
+Authenticates a user and returns a token. 
+
+- **URL**: `/auth/login`
+- **Method**: `POST`
+- **Authentication Required**: No
+
+**Request Payload:**
 ```json
 {
-  "email": "user@example.com",
-  "password": "securepassword123"
+  "email": "johndoe@example.com",
+  "password": "strongpassword123"
 }
 ```
 
-### Verify user email
-- **URL:** `/auth/verify-email`
-- **Method:** `POST`
-- **Responses:** `200 Email verified`
-
-**Request Body:**
+**Success Response (200 OK):**
 ```json
 {
-  "email": "user@example.com",
+  "success": true,
+  "message": "Login successful.",
+  "data": {
+    "user": {
+      "id": "cln123456789",
+      "email": "johndoe@example.com",
+      "fullName": "John Doe",
+      "role": "REPORTER",
+      "emailVerified": true
+    },
+    "token": "eyJhb..."
+  }
+}
+```
+
+**Error Note (Unverified Email):**
+If the user's email is unverified, the login is rejected with a `403` status:
+```json
+{
+  "success": false,
+  "message": "Email not verified. Please check your email for the verification code.",
+  "needsVerification": true,
+  "userId": "cln123456789",
+  "email": "johndoe@example.com"
+}
+```
+
+---
+
+### 1.3 Verify Email
+Verifies a user's email address using a 6-digit code.
+
+- **URL**: `/auth/verify-email`
+- **Method**: `POST`
+- **Authentication Required**: No
+
+**Request Payload:**
+```json
+{
+  "email": "johndoe@example.com",
   "code": "123456"
 }
 ```
+*(Alternatively, you can provide `"userId"` instead of `"email"`)*
 
-### Resend email verification code
-- **URL:** `/auth/resend-verification`
-- **Method:** `POST`
-- **Responses:** `200 Code resent`
-
-**Request Body:**
+**Success Response (200 OK):**
 ```json
 {
-  "email": "user@example.com"
+  "success": true,
+  "message": "Email verified successfully."
 }
 ```
 
-### Request password reset code
-- **URL:** `/auth/forgot-password`
-- **Method:** `POST`
-- **Responses:** `200 Reset code sent`
+---
 
-**Request Body:**
+### 1.4 Resend Verification Code
+Requests a new 6-digit email verification code. Rate limited to once per 60 seconds.
+
+- **URL**: `/auth/resend-verification`
+- **Method**: `POST`
+- **Authentication Required**: No
+
+**Request Payload:**
 ```json
 {
-  "email": "user@example.com"
+  "email": "johndoe@example.com"
+}
+```
+*(Alternatively, you can provide `"userId"`)*
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Verification code resent successfully.",
+  "expiresIn": 900
 }
 ```
 
-### Reset password
-- **URL:** `/auth/reset-password`
-- **Method:** `POST`
-- **Responses:** `200 Password updated`
+---
 
-**Request Body:**
+### 1.5 Get Current Profile (Me)
+Fetches the profile details of the currently authenticated user.
+
+- **URL**: `/auth/me`
+- **Method**: `GET`
+- **Authentication Required**: Yes (`Bearer Token`)
+
+**Success Response (200 OK):**
 ```json
 {
-  "email": "user@example.com",
-  "code": "123456",
+  "success": true,
+  "data": {
+    "user": {
+      "id": "cln123456789",
+      "email": "johndoe@example.com",
+      "fullName": "John Doe",
+      "role": "REPORTER",
+      "phoneNumber": "+2348000000000",
+      "emailVerified": true,
+      "createdAt": "2023-10-12T10:00:00Z",
+      "updatedAt": "2023-10-12T10:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+# 2. User Operations
+
+### 2.1 Update User Profile
+Updates personal or banking info. To update password here, provide `currentPassword` and `newPassword`.
+
+- **URL**: `/users/profile`
+- **Method**: `PUT`
+- **Authentication Required**: Yes (`Bearer Token`)
+
+**Request Payload (All fields optional):**
+```json
+{
+  "fullName": "John Doe Updated",
+  "phoneNumber": "+2348011111111",
+  "avatar": "https://r2.dev/avatars/new_john.jpg",
+  "bankName": "First Bank",
+  "accountNumber": "9876543210",
+  "accountName": "John Doe Updated",
+  "currentPassword": "oldpassword123",
   "newPassword": "newsecurepassword123"
 }
 ```
 
-### Get current profile
-- **URL:** `/auth/me`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 User data`
-
----
-
-## User Operations
-
-### Get full user profile
-- **URL:** `/users/profile`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Profile data`
-
-### Update profile info or bank details
-- **URL:** `/users/profile`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Updated`
-
-**Request Body:**
+**Success Response (200 OK):**
 ```json
 {
-  "fullName": "John Doe",
-  "phoneNumber": "+2348000000000",
-  "avatar": "https://r2.dev/avatars/john.jpg",
-  "bankName": "GTBank",
-  "accountNumber": "0123456789",
-  "accountName": "John Doe"
+  "success": true,
+  "message": "Profile updated successfully.",
+  "data": { "user": { /* ... */ } }
 }
 ```
 
-### Change password
-- **URL:** `/users/change-password`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Changed`
+---
 
-**Request Body:**
+### 2.2 Change Password
+Alternative dedicated endpoint for password changes.
+
+- **URL**: `/users/change-password`
+- **Method**: `PUT`
+- **Authentication Required**: Yes (`Bearer Token`)
+
+**Request Payload:**
 ```json
 {
   "currentPassword": "oldpassword123",
-  "newPassword": "newpassword123"
+  "newPassword": "newsecurepassword123"
 }
 ```
 
-### Get user reports
-- **URL:** `/users/reports`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 List of reports`
-
-### Get payout history
-- **URL:** `/users/payouts`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 List of payouts`
-
-### Get single payout details
-- **URL:** `/users/payouts/{id}`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Payout data`
-
-### Get user notifications
-- **URL:** `/users/notifications`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Notifications list`
-
-### Mark all notifications read
-- **URL:** `/users/notifications/read-all`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Success`
-
-### Mark specific notification read
-- **URL:** `/users/notifications/{id}/read`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Success`
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Password changed successfully."
+}
+```
 
 ---
 
-## Field Operations
+### 2.3 Get User's Content (Reports, Payouts, Notifications)
 
-### List all stadiums/fields
-- **URL:** `/fields`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 List of fields`
+All of these use **GET** and require **Authentication (`Bearer Token`)**.
 
-### Submit a new stadium field
-- **URL:** `/fields`
-- **Method:** `POST`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `201 Created`
+- **Get Own Reports:** `/users/reports?page=1&limit=10`
+- **Get Own Payouts:** `/users/payouts`
+- **Get Specific Payout Detail:** `/users/payouts/:id`
+- **Get Own Notifications:** `/users/notifications`
+- **Mark Notification Read:** `PUT /users/notifications/:id/read`
+- **Mark All Notifications Read:** `PUT /users/notifications/read-all`
 
-**Request Body:**
+*(Reports and Payouts return formatted paginated arrays)*
+
+---
+
+# 3. Field (Stadium) Operations
+
+### 3.1 List All Fields
+Retrieves fields. Non-admin users will ONLY be returned fields they personally created/own.
+
+- **URL**: `/fields`
+- **Method**: `GET`
+- **Authentication Required**: Yes (`Bearer Token`)
+- **Query Params (Optional)**: `?page=1&limit=10&status=APPROVED`
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "fields": [ /* Array of Field Objects */ ],
+    "pagination": {
+      "total": 1,
+      "page": 1,
+      "limit": 10,
+      "pages": 1
+    }
+  }
+}
+```
+
+---
+
+### 3.2 Submit a New Field
+Only users with a `REPORTER` or `OWNER` role can submit. Will verify fuzzy deduplication to ensure the same field hasn't been submitted before.
+
+- **URL**: `/fields`
+- **Method**: `POST`
+- **Authentication Required**: Yes (`Bearer Token`, min role: `REPORTER`)
+
+**Request Payload:**
 ```json
 {
   "name": "Legacy Pitch",
-  "location": "Lagos, Nigeria",
+  "location": "Surulere, Lagos",
   "description": "Standard 11-a-side pitch",
+  "surfaceType": "Artificial Grass",
+  "fieldSize": "11v11",
+  "availability": "Mon-Sun, 8AM to 10PM",
+  "contactInfo": "08012345678",
+  "access": "Public, Pay per hour",
+  "managerName": "Tunde",
+  "managerContact": "08087654321",
+  "latitude": 6.4950,
+  "longitude": 3.3591,
   "images": [
-    "https://r2.dev/fields/legacy1.jpg",
-    "https://r2.dev/fields/legacy2.jpg"
+    "https://r2.dev/img1.jpg",
+    "https://r2.dev/img2.jpg",
+    "https://r2.dev/img3.jpg"
   ]
 }
 ```
+*Note: `name` and `location` are strictly required. You MUST provide exactly `3` image strings inside the `images` array.*
 
-### Get details of a specific field
-- **URL:** `/fields/{id}`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Field details`
-
-### Update field information
-- **URL:** `/fields/{id}`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Updated`
-
-**Request Body:**
+**Success Response (201 Created):**
 ```json
 {
-  "name": "Updated Legacy Pitch",
-  "location": "Lagos, Nigeria",
-  "description": "Newly renovated 11-a-side pitch",
-  "status": "PENDING",
-  "surfaceType": "Artificial Grass",
-  "fieldSize": "11v11",
-  "images": ["https://r2.dev/fields/legacy1.jpg"]
+  "success": true,
+  "message": "Field created successfully.",
+  "data": { "field": { /* ... */ } }
 }
 ```
 
-### Delete a field
-- **URL:** `/fields/{id}`
-- **Method:** `DELETE`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Deleted`
-
----
-
-## Report Operations
-
-### Get all reports
-- **URL:** `/reports`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 List`
-
-### Post a scouting intelligence report
-- **URL:** `/reports`
-- **Method:** `POST`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `201 Submitted`
-
-**Request Body:**
+**Conflict Alert Response (409 Conflict):**
 ```json
 {
-  "content": "Pitch surface is 5/5, security is high.",
-  "fieldId": "fld123456789"
+  "success": false,
+  "message": "Duplicate Alert! It looks like this field has already been reported as 'Legacy Pitch' at 'Surulere, Lagos'. No need to submit it again!"
 }
-```
-
-### Get single report detail
-- **URL:** `/reports/{id}`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Report data`
-
-### Update report
-- **URL:** `/reports/{id}`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Updated`
-
-### Delete report
-- **URL:** `/reports/{id}`
-- **Method:** `DELETE`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 Deleted`
-
----
-
-## Upload
-
-### Single image upload to R2
-- **URL:** `/upload`
-- **Method:** `POST`
-- **Authentication:** 🔒 Bearer Token required
-- **Responses:** `200 JSON with public URL`
-
-**Request Body:** 
-Request should be a `multipart/form-data` with a file attached to the `image` key. Example using curl:
-```bash
-curl -X POST https://api.comeplayapp.com/api/v1/upload \
-  -H "Authorization: Bearer <your_token>" \
-  -F "image=@/path/to/your/image.jpg"
 ```
 
 ---
 
-## Admin Operations
+### 3.3 Update or Delete Field
+- **Update Field**: `PUT /fields/:id` (Provides exactly the same body as POST. Requires being the field's original creator.)
+- **Delete Field**: `DELETE /fields/:id`
 
-### Get system-wide statistics
-- **URL:** `/admin/stats`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `200 Analytics data`
+---
 
-### List all platform users
-- **URL:** `/admin/users`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `200 Users list`
+# 4. Report Operations
 
-### Get user details
-- **URL:** `/admin/users/{id}`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `200 User data`
+### 4.1 Post a Scouting Report
+Submit intelligence on an existing field.
 
-### Remove user account
-- **URL:** `/admin/users/{id}`
-- **Method:** `DELETE`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `200 Success`
+- **URL**: `/reports`
+- **Method**: `POST`
+- **Authentication Required**: Yes (`Bearer Token`)
 
-### Verify/Approve a stadium submission
-- **URL:** `/admin/fields/{id}/verify`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `200 Updated`
-
-**Request Body:**
+**Request Payload:**
 ```json
 {
-  "status": "APPROVED"
+  "content": "The pitch requires maintenance. The artificial grass is wearing off in the penalty box.",
+  "fieldId": "fld123456"
 }
 ```
 
-### List all system payouts
-- **URL:** `/admin/payouts`
-- **Method:** `GET`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `200 Payouts list`
-
-### Disburse a reward to a user
-- **URL:** `/admin/payouts`
-- **Method:** `POST`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `201 Payout initialized`
-
-**Request Body:**
+**Success Response (201 Created):**
 ```json
 {
-  "userId": "usr123456789",
+  "success": true,
+  "message": "Report created successfully.",
+  "data": { "report": { /* ... */ } }
+}
+```
+
+---
+
+# 5. File Upload
+
+### Single Image Upload to R2 Bucket
+Returns a direct public URL to save down and push in subsequent payloads (like field images or avatar).
+
+- **URL**: `/upload`
+- **Method**: `POST`
+- **Authentication Required**: Yes (`Bearer Token`)
+- **Headers**: `Content-Type: multipart/form-data`
+
+**Body**: 
+A form field with the key `image` containing the actual binary file.
+
+**Success Response (200 OK):**
+```json
+{
+  "url": "https://pub-yourbucketr2.r2.dev/filename-12345.jpg"
+}
+```
+
+*(Note: Returns direct URL, not wrapped in `success: true`)*
+
+---
+
+# 6. Admin Operations 
+*(Requires `ADMIN` Role)*
+
+### 6.1 Admin: Platform Users
+- **List Users**: `GET /admin/users?role=REPORTER&page=1&limit=20`
+- **Get Specific User**: `GET /admin/users/:id`
+- **Delete User**: `DELETE /admin/users/:id` (Permanent termination)
+
+### 6.2 Admin: Analytics Details
+Calculates top reporters, recent activity, and graphical 7-day stats.
+- **URL**: `GET /admin/stats`
+
+### 6.3 Admin: Payout Distributions
+Initialize and issue system payout status signals.
+
+- **List All Payouts**: `GET /admin/payouts?status=PENDING&page=1`
+- **Create a Payout Request (POST /admin/payouts)**: 
+```json
+{
+  "userId": "cln123",
   "amount": 50000,
-  "receiptUrl": "https://r2.dev/receipts/proof.jpg"
+  "status": "COMPLETED",
+  "receiptUrl": "url_to_proof"
 }
 ```
-
-### Update payout status or proof
-- **URL:** `/admin/payouts/{id}`
-- **Method:** `PUT`
-- **Authentication:** 🔒 Bearer Token required (ADMIN only)
-- **Responses:** `200 Updated`
-
----
-
-## Data Models (Schemas)
-
-### User
-```typescript
+- **Update a Payout (PUT /admin/payouts/:id)**:
+```json
 {
-  "id": "cln123456789",
-  "email": "scout@example.com",
-  "fullName": "John Doe",
-  "role": "REPORTER" | "OWNER" | "ADMIN",
-  "phoneNumber": "+2348000000000",
-  "avatar": "https://r2.dev/avatars/john.jpg",
-  "emailVerified": true,
-  "bankName": "GTBank",
-  "accountNumber": "0123456789",
-  "accountName": "John Doe"
+  "status": "COMPLETED",
+  "receiptUrl": "url_to_proof"
 }
 ```
 
-### Field
-```typescript
-{
-  "id": "fld123456789",
-  "name": "Legacy Pitch",
-  "location": "Lagos, Nigeria",
-  "description": "Standard 11-a-side pitch",
-  "status": "PENDING" | "APPROVED" | "REJECTED",
-  "surfaceType": "Artificial Grass",
-  "fieldSize": "11v11",
-  "ownerId": "usr123456789",
-  "images": [
-    "https://r2.dev/fields/legacy1.jpg"
-  ]
-}
-```
+### 6.4 Admin: Verify Field Submission Details
+Approve or reject a submitted stadium.
 
-### Report
-```typescript
-{
-  "id": "rpt123456789",
-  "content": "Pitch surface is 5/5, security is high.",
-  "status": "PENDING" | "APPROVED" | "REJECTED",
-  "userId": "usr123456789",
-  "fieldId": "fld123456789",
-  "createdAt": "2023-10-12T10:00:00Z"
-}
-```
-
-### Payout
-```typescript
-{
-  "id": "pay123456789",
-  "userId": "usr987654321",
-  "amount": 50000,
-  "status": "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED",
-  "processedAt": "2023-10-12T12:00:00Z",
-  "receiptUrl": "https://r2.dev/receipts/proof.jpg",
-  "createdAt": "2023-10-12T10:00:00Z"
-}
-```
+- **URL**: `PUT /admin/fields/:id/verify`
+- **Body**: `{ "status": "APPROVED" }` (or `"REJECTED"`)
