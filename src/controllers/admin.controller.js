@@ -457,7 +457,7 @@ export const deleteUser = async (req, res, next) => {
 export const verifyField = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, reason } = req.body;
 
         if (!['APPROVED', 'REJECTED'].includes(status)) {
             return res.status(400).json({
@@ -477,11 +477,16 @@ export const verifyField = async (req, res, next) => {
         });
 
         // Create notification for the scout
+        let message = `Intelligence submission "${field.name}" has been ${status.toLowerCase()} by administration.`;
+        if (status === 'REJECTED' && reason && reason.trim() !== '') {
+            message += ` Reason: ${reason.trim()}`;
+        }
+
         await prisma.notification.create({
             data: {
                 userId: field.ownerId,
                 title: `Protocol Update: Field ${status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}`,
-                message: `Intelligence submission "${field.name}" has been ${status.toLowerCase()} by administration.`,
+                message,
                 type: status === 'APPROVED' ? 'SUCCESS' : 'ERROR'
             }
         });
